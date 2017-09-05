@@ -709,7 +709,12 @@ mate_panel_applet_position_menu (GtkMenu   *menu,
 
 static void
 applet_show_menu (AppletInfo     *info,
+#if GTK_CHECK_VERSION (3, 22, 0)
+          GdkEventButton *event,
+          GtkWidget *widget)
+#else
 		  GdkEventButton *event)
+#endif
 {
 	PanelWidget *panel_widget;
 
@@ -733,9 +738,10 @@ applet_show_menu (AppletInfo     *info,
 	if (!gtk_widget_get_realized (info->menu))
 		gtk_widget_show (info->menu);
 #if GTK_CHECK_VERSION (3, 22, 0)
-	/* Trying to get the widget from the calling function here */
-	/* puts main menu (menubar) context menu in wrong place    */
-	gtk_menu_popup_at_pointer (GTK_MENU (info->menu),
+	gtk_menu_popup_at_widget (GTK_MENU (info->menu),
+	                          widget,
+	                          GDK_GRAVITY_SOUTH_WEST,
+	                          GDK_GRAVITY_NORTH_WEST,
 	                          NULL);
 #else
 	gtk_menu_popup (GTK_MENU (info->menu),
@@ -758,8 +764,11 @@ applet_do_popup_menu (GtkWidget      *widget,
 
 	if (info->type == PANEL_OBJECT_APPLET)
 		return FALSE;
+#if GTK_CHECK_VERSION (3, 22, 0)
+	applet_show_menu (info, event, widget);
+#else
 	applet_show_menu (info, event);
-
+#endif
 	return TRUE;
 }
 
