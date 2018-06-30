@@ -170,6 +170,12 @@ AM_CONDITIONAL(WNCKLET_INPROCESS, test -n "$WNCKLET_COMPILE_INPROCESS")
 # For the run dialog
 gl_CHECK_TYPE_STRUCT_DIRENT_D_TYPE
 
+#AC_DEFINE([COMPILE_X11], 1,
+#		[Defined when X11 specific functionality should be compiled])
+
+AC_DEFINE([COMPILE_WAYLAND], 1,
+		[Defined when Wayland specific functionality should be compiled])
+
 dnl X development libraries check
 
 PKG_CHECK_MODULES(X, x11 xau, :, [
