@@ -170,33 +170,38 @@ AM_CONDITIONAL(WNCKLET_INPROCESS, test -n "$WNCKLET_COMPILE_INPROCESS")
 # For the run dialog
 gl_CHECK_TYPE_STRUCT_DIRENT_D_TYPE
 
-#AC_DEFINE([COMPILE_X11], 1,
-#		[Defined when X11 specific functionality should be compiled])
+dnl Wayland development libraries check
 
-AC_DEFINE([COMPILE_WAYLAND], 1,
-		[Defined when Wayland specific functionality should be compiled])
+PKG_CHECK_MODULES(WAYLAND, wayland-client, have_wayland=yes, have_wayland=no)
+if test "x$have_wayland" = "xyes"; then
+  AC_DEFINE(HAVE_WAYLAND, 1, [Have the Wayland client library])
+fi
 
 dnl X development libraries check
 
-PKG_CHECK_MODULES(X, x11 xau, :, [
+PKG_CHECK_MODULES(X, x11 xau, have_x11=yes, [
   # pkg-config modules not found (only present since X11R7 aka Xorg); use
   # old-style detection
   AC_PATH_XTRA()
   # X not found
+  have_x11=yes
   if test x$no_x = xyes ; then
-    AC_MSG_ERROR([X development libraries not found])
+    #AC_MSG_ERROR([X development libraries not found])
+    have_x11=no
+  else
+    have_x11=yes
+    #AC_DEFINE(HAVE_X11, 1, [Have X11 libraries])
+    gp_save_cflags="$CFLAGS"
+    gp_save_libs="$LIBS"
+    CFLAGS="$X_CFLAGS"
+    LIBS="$X_PRE_LIBS $X_LIBS $X_EXTRA_LIBS"
+    AC_CHECK_LIB(X11, XFree,, AC_MSG_ERROR([libX11 not found]))
+    AC_CHECK_LIB(Xau, XauFileName,, AC_MSG_ERROR([libXau not found]))
+    CFLAGS="$gp_save_cflags"
+    LIBS="$gp_save_libs"
+
+    X_LIBS="$X_PRE_LIBS $X_LIBS -lX11 -lXau $X_EXTRA_LIBS"
   fi
-
-  gp_save_cflags="$CFLAGS"
-  gp_save_libs="$LIBS"
-  CFLAGS="$X_CFLAGS"
-  LIBS="$X_PRE_LIBS $X_LIBS $X_EXTRA_LIBS"
-  AC_CHECK_LIB(X11, XFree,, AC_MSG_ERROR([libX11 not found]))
-  AC_CHECK_LIB(Xau, XauFileName,, AC_MSG_ERROR([libXau not found]))
-  CFLAGS="$gp_save_cflags"
-  LIBS="$gp_save_libs"
-
-  X_LIBS="$X_PRE_LIBS $X_LIBS -lX11 -lXau $X_EXTRA_LIBS"
 ])
 
 AC_SUBST(X_LIBS)
@@ -335,6 +340,8 @@ echo "
         Maintainer mode:               ${USE_MAINTAINER_MODE}
         Use *_DISABLE_DEPRECATED:      ${enable_deprecation_flags}
         Applets to build in-process:   ${PANEL_INPROCESS_APPLETS}
+        Wayland support:               ${have_wayland}
+        X11 support:                   ${have_x11}
         XRandr support:                ${have_randr}
         Build introspection support:   ${found_introspection}
         Build gtk-doc documentation:   ${enable_gtk_doc}
