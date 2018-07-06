@@ -12,6 +12,7 @@ AM_CPPFLAGS = \
 	-I$(srcdir) \
 	-I$(top_builddir)/mate-panel \
 	-I$(top_builddir)/mate-panel/libpanel-util \
+	-I$(top_builddir)/mate-panel/wayland-protocols \
 	-DMATELOCALEDIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DPANELDATADIR=\""$(datadir)/mate-panel"\" \
 	$(DISABLE_DEPRECATED_CFLAGS)
@@ -63,7 +64,9 @@ panel_sources = \
 	panel-ditem-editor.c \
 	panel-modules.c \
 	panel-applet-info.c \
-	panel-reset.c
+	panel-reset.c \
+	wayland-protocols/wlr-layer-shell-unstable-v1-protocol.c \
+	wayland-protocols/xdg-shell-protocol.c
 
 panel_headers = \
 	panel-types.h \
@@ -115,7 +118,9 @@ panel_headers = \
 	panel-modules.h \
 	panel-applet-info.h \
 	panel-reset.h \
-	panel-schemas.h
+	panel-schemas.h \
+	wayland-protocols/wlr-layer-shell-unstable-v1-client-protocol.h \
+	wayland-protocols/xdg-shell-client-protocol.h
 
 mate_panel_SOURCES = \
 	$(panel_sources) \
