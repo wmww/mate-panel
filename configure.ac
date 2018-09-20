@@ -170,27 +170,25 @@ AM_CONDITIONAL(WNCKLET_INPROCESS, test -n "$WNCKLET_COMPILE_INPROCESS")
 # For the run dialog
 gl_CHECK_TYPE_STRUCT_DIRENT_D_TYPE
 
-dnl Wayland development libraries check
+# Check if we have wayland-client installed, and thus should build with Wayland support
 
 PKG_CHECK_MODULES(WAYLAND, wayland-client, have_wayland=yes, have_wayland=no)
-if test "x$have_wayland" = "xyes"; then
-  AC_DEFINE(HAVE_WAYLAND, 1, [Have the Wayland client library])
+if test x$have_wayland = xyes; then
+  # Allow backend specific code to ifdef on HAVE_WAYLAND
+  AC_DEFINE(HAVE_WAYLAND, 1, [Enable Wayland support])
 fi
 
-dnl X development libraries check
+# Check if we have the X development libraries
+# (we can compile with X and/or Wayland supported)
 
 PKG_CHECK_MODULES(X, x11 xau, have_x11=yes, [
   # pkg-config modules not found (only present since X11R7 aka Xorg); use
   # old-style detection
   AC_PATH_XTRA()
-  # X not found
-  have_x11=yes
   if test x$no_x = xyes ; then
-    #AC_MSG_ERROR([X development libraries not found])
     have_x11=no
   else
     have_x11=yes
-    #AC_DEFINE(HAVE_X11, 1, [Have X11 libraries])
     gp_save_cflags="$CFLAGS"
     gp_save_libs="$LIBS"
     CFLAGS="$X_CFLAGS"
@@ -203,6 +201,11 @@ PKG_CHECK_MODULES(X, x11 xau, have_x11=yes, [
     X_LIBS="$X_PRE_LIBS $X_LIBS -lX11 -lXau $X_EXTRA_LIBS"
   fi
 ])
+
+if test x$have_x11 = xyes; then
+  # Allow backend specific code to ifdef on HAVE_X11
+  AC_DEFINE(HAVE_X11, 1, [Enable X11 support])
+fi
 
 AC_SUBST(X_LIBS)
 
