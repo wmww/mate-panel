@@ -167,41 +167,78 @@ AM_CONDITIONAL(WNCKLET_INPROCESS, test -n "$WNCKLET_COMPILE_INPROCESS")
 # For the run dialog
 gl_CHECK_TYPE_STRUCT_DIRENT_D_TYPE
 
+must_enable_x11=no
+must_enable_wayland=no
+try_all_backends=yes
+
+AC_ARG_ENABLE(x11-backend,
+              [AC_HELP_STRING([--enable-x11-backend],
+                              [Enable the X11 backend, and disable the Wayland one (unless it is enabled explicitly)
+                              @<:@default=yes@:>@])],
+              [must_enable_x11=yes
+               try_all_backends=no],)
+
+AC_ARG_ENABLE(wayland-backend,
+              [AC_HELP_STRING([--enable-wayland-backend],
+                              [Enable the Wayland backend, and disable the X11 one (unless it is enabled explicitly)
+                              @<:@default=yes@:>@])],
+              [must_enable_wayland=yes
+               try_all_backends=no],)
+
 # Check if we have wayland-client installed, and thus should build with Wayland support
 
-PKG_CHECK_MODULES(WAYLAND, wayland-client, have_wayland=yes, have_wayland=no)
-if test x$have_wayland = xyes; then
-  # Allow backend specific code to ifdef on HAVE_WAYLAND
-  AC_DEFINE(HAVE_WAYLAND, 1, [Enable Wayland support])
+have_wayland=no
+
+if test "x$must_enable_wayland" = "xyes" -o "x$try_all_backends" = "xyes"; then
+
+  PKG_CHECK_MODULES(WAYLAND, wayland-client, have_wayland=yes,)
+
+  if test "x$have_wayland" = "xyes"; then
+    # Allow backend specific code to ifdef on HAVE_WAYLAND
+    AC_DEFINE(HAVE_WAYLAND, 1, [Enable Wayland support])
+  elif test "x$must_enable_wayland" = "xyes"; then
+    # The user has explicitly told us to use Wayland, but we can't find the library :(
+    AC_MSG_ERROR([Wayland client library not found])
+  fi
 fi
 
 # Check if we have the X development libraries
 # (we can compile with X and/or Wayland supported)
 
-PKG_CHECK_MODULES(X, x11 xau, have_x11=yes, [
-  # pkg-config modules not found (only present since X11R7 aka Xorg); use
-  # old-style detection
-  AC_PATH_XTRA()
-  if test x$no_x = xyes ; then
-    have_x11=no
-  else
-    have_x11=yes
-    gp_save_cflags="$CFLAGS"
-    gp_save_libs="$LIBS"
-    CFLAGS="$X_CFLAGS"
-    LIBS="$X_PRE_LIBS $X_LIBS $X_EXTRA_LIBS"
-    AC_CHECK_LIB(X11, XFree,, AC_MSG_ERROR([libX11 not found]))
-    AC_CHECK_LIB(Xau, XauFileName,, AC_MSG_ERROR([libXau not found]))
-    CFLAGS="$gp_save_cflags"
-    LIBS="$gp_save_libs"
+have_x11=no
 
-    X_LIBS="$X_PRE_LIBS $X_LIBS -lX11 -lXau $X_EXTRA_LIBS"
+if test "x$must_enable_x11" = "xyes" -o "x$try_all_backends" = "xyes"; then
+  PKG_CHECK_MODULES(X, x11 xau, have_x11=yes, [
+    # pkg-config modules not found (only present since X11R7 aka Xorg); use
+    # old-style detection
+    AC_PATH_XTRA()
+    if test "x$no_x" != "xyes"; then
+      # no_x is not yes, therefor X *is* available
+      have_x11=yes
+      gp_save_cflags="$CFLAGS"
+      gp_save_libs="$LIBS"
+      CFLAGS="$X_CFLAGS"
+      LIBS="$X_PRE_LIBS $X_LIBS $X_EXTRA_LIBS"
+      AC_CHECK_LIB(X11, XFree,, AC_MSG_ERROR([libX11 not found]))
+      AC_CHECK_LIB(Xau, XauFileName,, AC_MSG_ERROR([libXau not found]))
+      CFLAGS="$gp_save_cflags"
+      LIBS="$gp_save_libs"
+
+      X_LIBS="$X_PRE_LIBS $X_LIBS -lX11 -lXau $X_EXTRA_LIBS"
+    fi
+  ])
+
+  if test x$have_x11 = xyes; then
+    # Allow backend specific code to ifdef on HAVE_X11
+    AC_DEFINE(HAVE_X11, 1, [Enable X11 support])
+  elif test "x$must_enable_x11" = "xyes"; then
+    # The user has explicitly told us to use X11, but we can't find the libraries :(
+    AC_MSG_ERROR([X development libraries not found])
   fi
-])
+fi
 
-if test x$have_x11 = xyes; then
-  # Allow backend specific code to ifdef on HAVE_X11
-  AC_DEFINE(HAVE_X11, 1, [Enable X11 support])
+if test "x$have_x11" != "xyes" -a "x$have_wayland" != "xyes"; then
+  AC_MSG_ERROR([No usable backend available, install X or Wayland development libraries])
 fi
 
 AC_SUBST(X_LIBS)
