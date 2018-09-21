@@ -65,6 +65,7 @@ panel_sources = \
 	panel-modules.c \
 	panel-applet-info.c \
 	panel-reset.c \
+	wayland-backend.c \
 	wayland-protocols/wlr-layer-shell-unstable-v1-protocol.c \
 	wayland-protocols/xdg-shell-protocol.c
 
@@ -119,6 +120,7 @@ panel_headers = \
 	panel-applet-info.h \
 	panel-reset.h \
 	panel-schemas.h \
+	wayland-backend.h \
 	wayland-protocols/wlr-layer-shell-unstable-v1-client-protocol.h \
 	wayland-protocols/xdg-shell-client-protocol.h
 
