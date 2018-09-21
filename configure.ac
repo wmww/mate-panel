@@ -171,16 +171,16 @@ must_enable_x11=no
 must_enable_wayland=no
 try_all_backends=yes
 
-AC_ARG_ENABLE(x11-backend,
-              [AC_HELP_STRING([--enable-x11-backend],
-                              [Enable the X11 backend, and disable the Wayland one (unless it is enabled explicitly)
+AC_ARG_ENABLE(x11,
+              [AC_HELP_STRING([--enable-x11],
+                              [Enable X11 support and disable Wayland (unless it's also enabled explicitly)
                               @<:@default=yes@:>@])],
               [must_enable_x11=yes
                try_all_backends=no],)
 
-AC_ARG_ENABLE(wayland-backend,
-              [AC_HELP_STRING([--enable-wayland-backend],
-                              [Enable the Wayland backend, and disable the X11 one (unless it is enabled explicitly)
+AC_ARG_ENABLE(wayland,
+              [AC_HELP_STRING([--enable-wayland],
+                              [Enable Wayland support and disable X11 (unless it's also enabled explicitly)
                               @<:@default=yes@:>@])],
               [must_enable_wayland=yes
                try_all_backends=no],)
@@ -190,16 +190,15 @@ AC_ARG_ENABLE(wayland-backend,
 have_wayland=no
 
 if test "x$must_enable_wayland" = "xyes" -o "x$try_all_backends" = "xyes"; then
-
   PKG_CHECK_MODULES(WAYLAND, wayland-client, have_wayland=yes,)
+fi
 
-  if test "x$have_wayland" = "xyes"; then
-    # Allow backend specific code to ifdef on HAVE_WAYLAND
-    AC_DEFINE(HAVE_WAYLAND, 1, [Enable Wayland support])
-  elif test "x$must_enable_wayland" = "xyes"; then
-    # The user has explicitly told us to use Wayland, but we can't find the library :(
-    AC_MSG_ERROR([Wayland client library not found])
-  fi
+if test "x$have_wayland" = "xyes"; then
+  # Allow backend specific code to ifdef on HAVE_WAYLAND
+  AC_DEFINE([HAVE_WAYLAND], 1, [Enable Wayland support])
+elif test "x$must_enable_wayland" = "xyes"; then
+  # The user has explicitly told us to use Wayland, but we can't find the library :(
+  AC_MSG_ERROR([Wayland client library not found])
 fi
 
 # Check if we have the X development libraries
@@ -227,14 +226,14 @@ if test "x$must_enable_x11" = "xyes" -o "x$try_all_backends" = "xyes"; then
       X_LIBS="$X_PRE_LIBS $X_LIBS -lX11 -lXau $X_EXTRA_LIBS"
     fi
   ])
+fi
 
-  if test x$have_x11 = xyes; then
-    # Allow backend specific code to ifdef on HAVE_X11
-    AC_DEFINE(HAVE_X11, 1, [Enable X11 support])
-  elif test "x$must_enable_x11" = "xyes"; then
-    # The user has explicitly told us to use X11, but we can't find the libraries :(
-    AC_MSG_ERROR([X development libraries not found])
-  fi
+if test "x$have_x11" = "xyes"; then
+  # Allow backend specific code to ifdef on HAVE_X11
+  AC_DEFINE([HAVE_X11], 1, [Enable X11 support])
+elif test "x$must_enable_x11" = "xyes"; then
+  # The user has explicitly told us to use X11, but we can't find the libraries :(
+  AC_MSG_ERROR([X development libraries not found])
 fi
 
 if test "x$have_x11" != "xyes" -a "x$have_wayland" != "xyes"; then
@@ -378,8 +377,8 @@ echo "
         Maintainer mode:               ${USE_MAINTAINER_MODE}
         Use *_DISABLE_DEPRECATED:      ${enable_deprecation_flags}
         Applets to build in-process:   ${PANEL_INPROCESS_APPLETS}
-        Wayland support:               ${have_wayland}
         X11 support:                   ${have_x11}
+        Wayland support:               ${have_wayland}
         XRandr support:                ${have_randr}
         Build introspection support:   ${found_introspection}
         Build gtk-doc documentation:   ${enable_gtk_doc}
