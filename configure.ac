@@ -196,10 +196,10 @@ if test "x$must_enable_wayland" = "xyes" -o "x$try_all_backends" = "xyes"; then
   PKG_CHECK_MODULES(WAYLAND, wayland-client, have_wayland=yes,)
 fi
 
-if test "x$have_wayland" = "xyes"; then
-  # Allow backend specific code to ifdef on HAVE_WAYLAND
-  AC_DEFINE([HAVE_WAYLAND], 1, [Enable Wayland support])
-elif test "x$must_enable_wayland" = "xyes"; then
+AM_CONDITIONAL(ENABLE_WAYLAND, [test "x$have_wayland" = "xyes"])
+
+# Error out if Wayland was required but not found
+if test "x$have_wayland" != "xyes" -a "x$must_enable_wayland" = "xyes"; then
   # The user has explicitly told us to use Wayland, but we can't find the library :(
   AC_MSG_ERROR([Wayland client library not found])
 fi
@@ -231,10 +231,10 @@ if test "x$must_enable_x11" = "xyes" -o "x$try_all_backends" = "xyes"; then
   ])
 fi
 
-if test "x$have_x11" = "xyes"; then
-  # Allow backend specific code to ifdef on HAVE_X11
-  AC_DEFINE([HAVE_X11], 1, [Enable X11 support])
-elif test "x$must_enable_x11" = "xyes"; then
+AM_CONDITIONAL(ENABLE_X11, [test "x$have_x11" = "xyes"])
+
+# Error out if X was required but not found
+if test "x$have_x11" != "xyes" -a "x$must_enable_x11" = "xyes"; then
   # The user has explicitly told us to use X11, but we can't find the libraries :(
   AC_MSG_ERROR([X development libraries not found])
 fi
