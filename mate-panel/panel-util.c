@@ -46,6 +46,10 @@
 #include "panel-icon-names.h"
 #include "panel-lockdown.h"
 
+#ifdef HAVE_X11
+#include <gdk/gdkx.h>
+#endif
+
 char *
 panel_util_make_exec_uri_for_desktop (const char *exec)
 {
@@ -1239,4 +1243,15 @@ panel_util_get_file_optional_homedir (const char *location)
 	g_free (path);
 
 	return file;
+}
+
+int
+panel_util_get_screen_number (GdkScreen *screen)
+{
+#ifdef HAVE_X11
+	if (GDK_IS_X11_DISPLAY (gdk_screen_get_display (screen)))
+		return gdk_x11_screen_get_screen_number (screen);
+#endif
+
+	return gdk_screen_get_number (screen);
 }

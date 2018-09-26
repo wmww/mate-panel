@@ -66,6 +66,8 @@ void panel_util_set_tooltip_text (GtkWidget  *widget,
 
 GFile *panel_util_get_file_optional_homedir (const char *location);
 
+int panel_util_get_screen_number (GdkScreen *screen);
+
 #ifdef __cplusplus
 }
 #endif
