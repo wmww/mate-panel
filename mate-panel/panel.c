@@ -377,9 +377,8 @@ panel_popup_menu (PanelToplevel *toplevel,
 	} else
 #endif
 	{ // Not using Wayland
+		gtk_menu_popup (GTK_MENU (menu), NULL, NULL, NULL, NULL, button, activate_time);
 	}
-
-	gtk_menu_popup (GTK_MENU (menu), NULL, NULL, NULL, NULL, button, activate_time);
 
 	return TRUE;
 }
