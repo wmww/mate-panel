@@ -195,6 +195,10 @@ fi
 
 AM_CONDITIONAL(ENABLE_WAYLAND, [test "x$have_wayland" = "xyes"])
 
+if test "x$have_wayland" = "xyes"; then
+  AC_DEFINE(HAVE_WAYLAND, 1, [Have the Wayland development library])
+fi
+
 # Error out if Wayland was required but not found
 if test "x$have_wayland" != "xyes" -a "x$must_enable_wayland" = "xyes"; then
   # The user has explicitly told us to use Wayland, but we can't find the library :(
@@ -229,6 +233,10 @@ if test "x$must_enable_x11" = "xyes" -o "x$try_all_backends" = "xyes"; then
 fi
 
 AM_CONDITIONAL(ENABLE_X11, [test "x$have_x11" = "xyes"])
+
+if test "x$have_x11" = "xyes"; then
+  AC_DEFINE(HAVE_X11, 1, [Have the Wayland development library])
+fi
 
 # Error out if X was required but not found
 if test "x$have_x11" != "xyes" -a "x$must_enable_x11" = "xyes"; then
