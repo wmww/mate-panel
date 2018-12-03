@@ -235,7 +235,7 @@ fi
 AM_CONDITIONAL(ENABLE_X11, [test "x$have_x11" = "xyes"])
 
 if test "x$have_x11" = "xyes"; then
-  AC_DEFINE(HAVE_X11, 1, [Have the Wayland development library])
+  AC_DEFINE(HAVE_X11, 1, [Have the X11 development library])
 fi
 
 # Error out if X was required but not found
