@@ -24,11 +24,11 @@ void wayland_set_strut (GdkWindow        *gdk_window,
 			guint32           strut_start,
 			guint32           strut_end);
 void wayland_popup_menu_setup (GtkWidget *menu, GtkWidget *attach_widget);
-void wayland_tooltip_setup (GtkWidget  *widget,
-			    gint        x,
-			    gint        y,
-			    gboolean    keyboard_tip,
-			    GtkTooltip *tooltip,
-			    void       *_data);
+gboolean wayland_tooltip_setup (GtkWidget  *widget,
+				gint        x,
+				gint        y,
+				gboolean    keyboard_tip,
+				GtkTooltip *tooltip,
+				void       *_data);
 
 #endif /* __WAYLAND_BACKEND_H__ */
