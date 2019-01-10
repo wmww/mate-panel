@@ -364,34 +364,67 @@ static const struct xdg_popup_listener xdg_popup_listener = {
 	.popup_done = xdg_popup_handle_popup_done,
 };
 
+// populates known surfaces for the given widget
+// NULL can be passed to the outputs and they will be ignored
+static void
+wayland_get_shell_surfaces (GtkWidget *widget,
+			    struct zwlr_layer_surface_v1 **layer_surface,
+			    struct xdg_surface **xdg_surface,
+			    struct xdg_toplevel **xdg_toplevel,
+			    struct xdg_popup **xdg_popup)
+{
+	GdkWindow *window;
+	struct _WaylandLayerSurfaceData *layer_data;
+
+	if (layer_surface)
+		*layer_surface = NULL;
+	if (xdg_surface)
+		*xdg_surface = NULL;
+	if (xdg_toplevel)
+		*xdg_toplevel = NULL;
+	if (xdg_popup)
+		*xdg_popup = NULL;
+
+	// if attaching to a Layer Surface
+	window = gdk_window_get_toplevel (gtk_widget_get_window (widget));
+	layer_data = g_object_get_data (G_OBJECT (window), wayland_layer_surface_key);
+	if (layer_data) {
+		if (layer_surface)
+			*layer_surface = layer_data->layer_surface;
+		if (xdg_surface)
+			*xdg_surface = layer_data->fallback_xdg_surface;
+		if (xdg_toplevel)
+			*xdg_toplevel = layer_data->fallback_xdg_toplevel;
+	} else {
+		WaylandPopupData *attach_popup_data;
+		attach_popup_data = g_object_get_data (G_OBJECT (gtk_widget_get_toplevel (widget)), wayland_popup_data_key);
+		if (attach_popup_data) {
+			if (xdg_surface)
+				*xdg_surface = attach_popup_data->xdg_surface;
+			if (xdg_popup)
+				*xdg_popup = attach_popup_data->xdg_popup;
+		}
+	}
+}
+
 static struct xdg_popup *
 wayland_get_xdg_popup (struct xdg_surface *popup_xdg_surface, GtkWidget *attach_widget, struct xdg_positioner *positioner)
 {
-	GdkWindow *attach_window;
-	struct _WaylandLayerSurfaceData *layer_data;
-	WaylandPopupData *attach_popup_data;
+	struct zwlr_layer_surface_v1 *layer_surface;
+	struct xdg_surface *xdg_surface;
 
-	// if attaching to a Layer Surface
-	attach_window = gdk_window_get_toplevel (gtk_widget_get_window (attach_widget));
-	layer_data = g_object_get_data (G_OBJECT (attach_window), wayland_layer_surface_key);
-	if (layer_data) {
-		if (layer_data->layer_surface) {
-			struct xdg_popup *xdg_popup;
-			xdg_popup = xdg_surface_get_popup (popup_xdg_surface, NULL, positioner);
-			zwlr_layer_surface_v1_get_popup (layer_data->layer_surface, xdg_popup);
-			return xdg_popup;
-		} else if (layer_data->fallback_xdg_surface) {
-			return xdg_surface_get_popup (popup_xdg_surface, layer_data->fallback_xdg_surface, positioner);
-		}
+	wayland_get_shell_surfaces (attach_widget, &layer_surface, &xdg_surface, NULL, NULL);
+
+	if (layer_surface) {
+		struct xdg_popup *xdg_popup;
+		xdg_popup = xdg_surface_get_popup (popup_xdg_surface, NULL, positioner);
+		zwlr_layer_surface_v1_get_popup (layer_surface, xdg_popup);
+		return xdg_popup;
+	} else if (xdg_surface) {
+		return xdg_surface_get_popup (popup_xdg_surface, xdg_surface, positioner);
+	} else {
+		return NULL;
 	}
-
-	// If attaching to a parent popup
-	attach_popup_data = g_object_get_data (G_OBJECT (gtk_widget_get_toplevel (attach_widget)), wayland_popup_data_key);
-	if (attach_popup_data && attach_popup_data->xdg_surface) {
-		return xdg_surface_get_popup (popup_xdg_surface, attach_popup_data->xdg_surface, positioner);
-	}
-
-	return NULL;
 }
 
 static void
