@@ -383,7 +383,7 @@ xdg_popup_handle_configure (void *wayland_shell_surface,
 			    int32_t height)
 {
 	WaylandShellSurface *self = wayland_shell_surface;
-	gtk_widget_set_size_request (GTK_WIDGET (self->gtk_window), width, height);
+	gtk_window_resize (self->gtk_window, width, height);
 }
 
 static void
@@ -582,11 +582,6 @@ wayland_popup_map_event_cb (GtkWidget *popup_widget, GdkEvent *event, WaylandShe
 		toplevel_orientation = PANEL_ORIENTATION_BOTTOM;
 	}
 
-	if (shell_surface->transient_for_widget == GTK_WIDGET (toplevel)) {
-		anchor = XDG_POSITIONER_ANCHOR_TOP_LEFT;
-		widget_get_pointer_position (shell_surface->transient_for_widget, &offset.x, &offset.y);
-	}
-
 	if (shell_surface->is_tooltip) {
 		switch (toplevel_orientation) {
 		case PANEL_ORIENTATION_TOP:
@@ -633,6 +628,10 @@ wayland_popup_map_event_cb (GtkWidget *popup_widget, GdkEvent *event, WaylandShe
 			anchor = XDG_POSITIONER_ANCHOR_TOP_RIGHT;
 			gravity = XDG_POSITIONER_GRAVITY_BOTTOM_RIGHT;
 			break;
+		}
+		if (shell_surface->transient_for_widget == GTK_WIDGET (toplevel)) {
+			anchor = XDG_POSITIONER_ANCHOR_TOP_LEFT;
+			widget_get_pointer_position (shell_surface->transient_for_widget, &offset.x, &offset.y);
 		}
 	}
 
