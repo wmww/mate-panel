@@ -16,20 +16,12 @@
 gboolean is_using_wayland (void);
 
 // wayland_* functions must only be called when using Wayland
-void wayland_registry_init (void);
-void wayland_realize_panel_toplevel (GtkWidget *window);
-void wayland_set_strut (GdkWindow        *gdk_window,
-			PanelOrientation  orientation,
-			guint32           strut,
-			guint32           strut_start,
-			guint32           strut_end);
-void wayland_popup_menu_setup (GtkWidget *menu, GtkWidget *attach_widget);
-gboolean wayland_tooltip_setup (GtkWidget  *widget,
-				gint        x,
-				gint        y,
-				gboolean    keyboard_tip,
-				GtkTooltip *tooltip,
-				void       *_data);
-void wayland_setup_widget (GtkWidget *widget);
+void wayland_init (void);
+void wayland_panel_toplevel_realize (PanelToplevel *window);
+void wayland_panel_toplevel_set_strut (PanelToplevel     *gdk_window,
+				       PanelOrientation  orientation,
+				       guint32           strut,
+				       guint32           strut_start,
+				       guint32           strut_end);
 
 #endif /* __WAYLAND_BACKEND_H__ */
