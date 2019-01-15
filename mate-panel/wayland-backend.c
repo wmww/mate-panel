@@ -124,8 +124,6 @@ wayland_shell_surface_unmap (WaylandShellSurface *self)
 {
 	// This function must be called before the wl_surface can be safely destroyed
 
-	g_message ("Window unmapped %p", self);
-
 	self->width = 0;
 	self->height = 0;
 
@@ -161,23 +159,10 @@ wayland_shell_surface_destroy_cb (WaylandShellSurface *self) {
 	free (self);
 }
 
-/*
-static void
-wayland_shell_surface_destroy (WaylandShellSurface *self) {
-	GdkWindow *gdk_window;
-
-	gdk_window = gtk_widget_get_window (GTK_WIDGET (self->gtk_window));
-	g_return_if_fail (gdk_window);
-
-	g_object_set_data (G_OBJECT (gdk_window), wayland_shell_surface_key, NULL);
-}
-*/
-
 static void
 wayland_shell_surface_set_size (WaylandShellSurface *self, gint width, gint height)
 {
 	if (self->width != width || self->height != height) {
-		g_message ("Set window %p size %dx%d -> %dx%d", self, self->width, self->height, width, height);
 		self->width  = width;
 		self->height = height;
 		if (self->layer_surface)
@@ -192,7 +177,6 @@ wayland_widget_size_allocate_cb (GtkWidget           *widget,
 				 GdkRectangle        *allocation,
 				 WaylandShellSurface *shell_surface)
 {
-	g_message ("Size allocate");
 	wayland_shell_surface_set_size (shell_surface,
 					allocation->width,
 					allocation->height);
@@ -698,14 +682,6 @@ wayland_window_realize_override_cb (GtkWindow *gtk_window, void *_data)
 		shell_surface->is_tooltip = is_tooltip;
 		shell_surface->transient_for_widget = transient_for_widget;
 	}
-
-	g_message (" _______________");
-	g_message ("|    gtk window: %p", gtk_window);
-	g_message ("|          name: %s", gtk_widget_get_name (GTK_WIDGET (gtk_window)));
-	g_message ("| transient for: %p", gtk_window_get_transient_for (gtk_window));
-	g_message ("|   attached to: %p", gtk_window_get_attached_to (gtk_window));
-	g_message ("|    is tooltip: %d", G_TYPE_CHECK_INSTANCE_TYPE (gtk_window, is_tooltip));
-	g_message ("| shell surface: %p", wayland_widget_get_wayland_shell_surface (window_widget));
 }
 
 // This callback must override the default unmap handler, so it can run first
@@ -732,7 +708,6 @@ wayland_query_tooltip_emission_hook (GSignalInvocationHint *_ihint,
 				     const GValue *param_values,
 				     gpointer _data)
 {
-	g_message ("wayland_query_tooltip_emission_hook %p (%s)", GTK_WIDGET (g_value_peek_pointer(&param_values[0])), gtk_widget_get_name (GTK_WIDGET (g_value_peek_pointer(&param_values[0]))));
 	last_query_tooltip_widget = GTK_WIDGET (g_value_peek_pointer(&param_values[0]));
 	return TRUE; // Always stay connected
 }
