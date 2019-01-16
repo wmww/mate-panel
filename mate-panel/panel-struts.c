@@ -339,11 +339,11 @@ panel_struts_set_window_hint (PanelToplevel *toplevel)
 
 #ifdef HAVE_WAYLAND
 	if (is_using_wayland ()) {
-		wayland_set_strut (gtk_widget_get_window (widget),
-				   strut->orientation,
-				   strut_size,
-				   strut->allocated_strut_start * scale,
-				   strut->allocated_strut_end * scale);
+		wayland_panel_toplevel_set_strut (toplevel,
+						  strut->orientation,
+						  strut_size,
+						  strut->allocated_strut_start * scale,
+						  strut->allocated_strut_end * scale);
 	}
 #endif
 }

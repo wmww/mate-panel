@@ -3089,8 +3089,9 @@ panel_toplevel_realize (GtkWidget *widget)
 	panel_background_realized (&toplevel->background, window);
 
 #ifdef HAVE_WAYLAND
-	if (is_using_wayland ())
-		wayland_realize_panel_toplevel (widget);
+	if (is_using_wayland ()) {
+		wayland_panel_toplevel_realize (toplevel);
+	}
 #endif
 
 	panel_struts_set_window_hint (toplevel);
