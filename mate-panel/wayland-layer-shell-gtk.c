@@ -140,8 +140,10 @@ xdg_popup_handle_configure (void *wayland_shell_surface,
 			    int32_t width,
 			    int32_t height)
 {
-	WaylandShellSurface *self = wayland_shell_surface;
-	gtk_window_resize (self->gtk_window, width, height);
+	if (width > 0 && height > 0) {
+		WaylandShellSurface *self = wayland_shell_surface;
+		gtk_window_resize (self->gtk_window, width, height);
+	}
 }
 
 static void
