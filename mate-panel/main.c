@@ -157,8 +157,9 @@ main (int argc, char **argv)
 	}
 
 #ifdef HAVE_WAYLAND
-	if (is_using_wayland ())
-		wayland_registry_init ();
+	if (is_using_wayland ()) {
+		wayland_init ();
+	}
 #endif
 
 	if (!panel_shell_register (replace)) {
