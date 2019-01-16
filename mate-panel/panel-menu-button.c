@@ -50,10 +50,6 @@
 #include "panel-icon-names.h"
 #include "panel-schemas.h"
 
-#ifdef HAVE_WAYLAND
-#include "wayland-backend.h"
-#endif
-
 G_DEFINE_TYPE (PanelMenuButton, panel_menu_button, BUTTON_TYPE_WIDGET)
 
 #define PANEL_MENU_BUTTON_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), PANEL_TYPE_MENU_BUTTON, PanelMenuButtonPrivate))
@@ -482,11 +478,8 @@ panel_menu_button_popup_menu (PanelMenuButton *button,
 	screen = gtk_window_get_screen (GTK_WINDOW (button->priv->toplevel));
 	gtk_menu_set_screen (GTK_MENU (button->priv->menu), screen);
 
-#ifdef HAVE_WAYLAND
-	if (GDK_IS_WAYLAND_DISPLAY (gtk_widget_get_display (GTK_WIDGET (button)))) {
-		wayland_popup_menu_setup(button->priv->menu, GTK_WIDGET (button));
-	}
-#endif
+	gtk_window_set_attached_to (GTK_WINDOW (gtk_widget_get_toplevel (button->priv->menu)),
+				    GTK_WIDGET (button));
 
 	gtk_menu_popup_at_widget (GTK_MENU (button->priv->menu),
 	                          GTK_WIDGET (button),

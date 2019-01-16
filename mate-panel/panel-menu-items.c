@@ -36,10 +36,6 @@
 
 #include "panel-menu-items.h"
 
-#ifdef HAVE_WAYLAND
-#include "wayland-backend.h"
-#endif
-
 #include <string.h>
 #include <glib/gi18n.h>
 #include <gio/gio.h>
@@ -1246,11 +1242,8 @@ panel_desktop_menu_item_create_menu (PanelDesktopMenuItem *desktop_item)
 			   "panel-menu-append-callback-data",
 			   desktop_item);
 
-#ifdef HAVE_WAYLAND
-	if (is_using_wayland ()) {
-		wayland_popup_menu_setup(desktop_menu, GTK_WIDGET (desktop_item));
-	}
-#endif
+	gtk_window_set_attached_to (GTK_WINDOW (gtk_widget_get_toplevel (desktop_menu)),
+				    GTK_WIDGET (desktop_item));
 
 	return desktop_menu;
 }

@@ -40,10 +40,6 @@
 #include "panel-schemas.h"
 #include "menu.h"
 
-#ifdef HAVE_WAYLAND
-#include "wayland-backend.h"
-#endif
-
 #define SMALL_ICON_SIZE 20
 
 static GSList *registered_applets = NULL;
@@ -747,12 +743,7 @@ applet_show_menu (AppletInfo     *info,
 	if (!gtk_widget_get_realized (info->menu))
 		gtk_widget_show (info->menu);
 
-#ifdef HAVE_WAYLAND
-	if (is_using_wayland ()) {
-		wayland_popup_menu_setup (GTK_WIDGET (info->menu), info->widget);
-	}
-#endif
-
+	gtk_window_set_attached_to (GTK_WINDOW (gtk_widget_get_toplevel (info->menu)), info->widget);
 	gtk_menu_popup_at_pointer (GTK_MENU (info->menu), NULL);
 }
 

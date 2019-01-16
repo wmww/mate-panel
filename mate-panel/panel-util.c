@@ -1198,27 +1198,11 @@ panel_util_query_tooltip_cb (GtkWidget  *widget,
 			     GtkTooltip *tooltip,
 			     const char *text)
 {
-	GdkWindow *window;
-	gboolean (*tooltip_setup_func) (GtkWidget  *widget,
-					gint        x,
-					gint        y,
-					gboolean    keyboard_tip,
-					GtkTooltip *tooltip,
-					const char *text);
-
 	if (!panel_global_config_get_tooltips_enabled ())
 		return FALSE;
 
 	gtk_tooltip_set_text (tooltip, text);
 
-	window = gdk_window_get_toplevel (gtk_widget_get_window (widget));
-	tooltip_setup_func = g_object_get_data (G_OBJECT (window),
-						"tooltip_setup_func");
-	if (tooltip_setup_func) {
-		tooltip_setup_func (widget, x, y, keyboard_tip, tooltip, text);
-	} else if (GDK_IS_WAYLAND_DISPLAY (gdk_display_get_default ())) {
-		g_warning ("No tooltip setup func on window %p, which is required on Wayland", window);
-	}
 	return TRUE;
 }
 

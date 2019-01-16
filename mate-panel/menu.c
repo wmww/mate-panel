@@ -52,10 +52,6 @@
 #include "panel-icon-names.h"
 #include "panel-schemas.h"
 
-#ifdef HAVE_WAYLAND
-#include "wayland-backend.h"
-#endif
-
 static GtkWidget *populate_menu_from_directory (GtkWidget          *menu,
 						MateMenuTreeDirectory *directory);
 
@@ -567,11 +563,8 @@ show_item_menu (GtkWidget      *item,
 	gtk_menu_set_screen (GTK_MENU (menu),
 			     gtk_window_get_screen (GTK_WINDOW (panel_widget->toplevel)));
 
-#ifdef HAVE_WAYLAND
-	if (GDK_IS_WAYLAND_DISPLAY (gtk_widget_get_display (item))) {
-		wayland_popup_menu_setup(menu, item);
-	}
-#endif
+	gtk_window_set_attached_to (GTK_WINDOW (gtk_widget_get_toplevel (menu)), item);
+
 	gtk_menu_popup (GTK_MENU (menu),
 			NULL, NULL, NULL, NULL,
 			bevent->button,
@@ -1414,9 +1407,4 @@ void
 panel_menu_item_set_submenu (GtkMenuItem *menu_item, GtkWidget *submenu)
 {
 	gtk_menu_item_set_submenu (menu_item, submenu);
-#ifdef HAVE_WAYLAND
-	if (is_using_wayland ()) {
-		wayland_popup_menu_setup(submenu, GTK_WIDGET (menu_item));
-	}
-#endif
 }
