@@ -1242,6 +1242,9 @@ panel_desktop_menu_item_create_menu (PanelDesktopMenuItem *desktop_item)
 			   "panel-menu-append-callback-data",
 			   desktop_item);
 
+	gtk_window_set_attached_to (GTK_WINDOW (gtk_widget_get_toplevel (desktop_menu)),
+				    GTK_WIDGET (desktop_item));
+
 	return desktop_menu;
 }
 

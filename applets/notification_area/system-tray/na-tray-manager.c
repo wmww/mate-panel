@@ -33,6 +33,7 @@
 
 #include <gtk/gtk.h>
 #include <glib/gi18n.h>
+
 #include <gdk/gdkx.h>
 #include <X11/Xatom.h>
 

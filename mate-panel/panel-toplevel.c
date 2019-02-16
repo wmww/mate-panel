@@ -32,13 +32,22 @@
 #include <string.h>
 
 #include <gtk/gtk.h>
+#ifdef HAVE_X11
 #include <gdk/gdkx.h>
+#endif
 #include <gdk/gdkkeysyms.h>
 #include <glib/gi18n.h>
 
+#include "panel-util.h"
 #include "panel-profile.h"
 #include "panel-frame.h"
+#ifdef HAVE_X11
+#include "xstuff.h"
 #include "panel-xutils.h"
+#endif
+#ifdef HAVE_WAYLAND
+#include "wayland-backend.h"
+#endif
 #include "panel-multiscreen.h"
 #include "panel-a11y.h"
 #include "panel-typebuiltins.h"
@@ -328,16 +337,33 @@ static GdkScreen* panel_toplevel_get_screen_geometry(PanelToplevel* toplevel, in
 	g_return_val_if_fail(PANEL_IS_TOPLEVEL (toplevel), NULL);
 	g_return_val_if_fail(width != NULL && height != NULL, NULL);
 
-	screen = gtk_window_get_screen(GTK_WINDOW(toplevel));
+	screen = gtk_window_get_screen (GTK_WINDOW(toplevel));
 
-	/* To scale the panels up for HiDPI displays, we can either multiply a lot of
-	 * toplevel geometry attributes by the scale factor, then correct for all
-	 * sorts of awful misalignments and pretend it's all good. Or we can just
-	 * make this thing think that the screen is scaled down, and because GTK+
-	 * already scaled everything up without the panel knowing about it, the whole
-	 * thing somehow works well... sigh. */
-	*width  = WidthOfScreen (gdk_x11_screen_get_xscreen (screen)) / toplevel->priv->scale;
-	*height = HeightOfScreen (gdk_x11_screen_get_xscreen (screen)) / toplevel->priv->scale;
+#ifdef HAVE_X11
+	if (GDK_IS_X11_DISPLAY (gtk_widget_get_display (GTK_WIDGET (toplevel)))) {
+		/* To scale the panels up for HiDPI displays, we can either multiply a lot of
+		* toplevel geometry attributes by the scale factor, then correct for all
+		* sorts of awful misalignments and pretend it's all good. Or we can just
+		* make this thing think that the screen is scaled down, and because GTK+
+		* already scaled everything up without the panel knowing about it, the whole
+		* thing somehow works well... sigh. */
+		*width  = WidthOfScreen (gdk_x11_screen_get_xscreen (screen)) / toplevel->priv->scale;
+		*height = HeightOfScreen (gdk_x11_screen_get_xscreen (screen)) / toplevel->priv->scale;
+		*width /= toplevel->priv->scale;
+		*height /= toplevel->priv->scale;
+	} else
+#endif
+	{ // Not using X11
+		GdkMonitor* monitor;
+		GdkRectangle geom;
+
+		monitor = gdk_display_get_monitor_at_window (gtk_widget_get_display (GTK_WIDGET (toplevel)),
+							     gtk_widget_get_window (GTK_WIDGET (toplevel)));
+		gdk_monitor_get_geometry (monitor, &geom);
+		/* geom is already in application pixels, so no need to scale */
+		*width = geom.width;
+		*height = geom.height;
+	}
 
 	return screen;
 }
@@ -425,8 +451,11 @@ static void panel_toplevel_init_resize_drag_offsets(PanelToplevel* toplevel, Pan
 	}
 }
 
+#ifdef HAVE_X11
 static void panel_toplevel_warp_pointer(PanelToplevel* toplevel)
 {
+	g_assert (GDK_IS_X11_DISPLAY (gtk_widget_get_display (GTK_WIDGET (toplevel))));
+
 	GtkWidget    *widget;
 	GdkRectangle  geometry;
 	int           x, y;
@@ -471,6 +500,7 @@ static void panel_toplevel_warp_pointer(PanelToplevel* toplevel)
 
 	panel_warp_pointer (gtk_widget_get_window (widget), x, y);
 }
+#endif // HAVE_X11
 
 static void panel_toplevel_begin_attached_move(PanelToplevel* toplevel, gboolean is_keyboard, guint32 time_)
 {
@@ -539,8 +569,10 @@ static void panel_toplevel_begin_grab_op(PanelToplevel* toplevel, PanelGrabOpTyp
 
 	gtk_grab_add (widget);
 
-	if (toplevel->priv->grab_is_keyboard)
+#ifdef HAVE_X11
+	if (is_using_x11 () && toplevel->priv->grab_is_keyboard)
 		panel_toplevel_warp_pointer (toplevel);
+#endif
 
 	cursor_type = panel_toplevel_grab_op_cursor (
 				toplevel, toplevel->priv->grab_op);
@@ -873,8 +905,11 @@ static void panel_toplevel_rotate_to_pointer(PanelToplevel* toplevel, int pointe
 		panel_toplevel_set_orientation (toplevel, PANEL_ORIENTATION_TOP);
 }
 
+#ifdef HAVE_X11
 static gboolean panel_toplevel_warp_pointer_increment(PanelToplevel* toplevel, int keyval, int increment)
 {
+	g_assert (GDK_IS_X11_DISPLAY (gtk_widget_get_display (GTK_WIDGET (toplevel))));
+
 	GdkScreen *screen;
 	GdkWindow *root_window;
 	GdkDevice      *device;
@@ -911,6 +946,7 @@ static gboolean panel_toplevel_warp_pointer_increment(PanelToplevel* toplevel, i
 
 	return TRUE;
 }
+#endif // HAVE_X11
 
 static gboolean panel_toplevel_move_keyboard_floating(PanelToplevel* toplevel, GdkEventKey* event)
 {
@@ -922,8 +958,12 @@ static gboolean panel_toplevel_move_keyboard_floating(PanelToplevel* toplevel, G
 	if ((event->state & gtk_accelerator_get_default_mod_mask ()) == GDK_SHIFT_MASK)
 		increment = SMALL_INCREMENT;
 
-	return panel_toplevel_warp_pointer_increment (
-				toplevel, event->keyval, increment);
+#ifdef HAVE_X11
+	if (GDK_IS_X11_DISPLAY (gtk_widget_get_display (GTK_WIDGET (toplevel))))
+		return panel_toplevel_warp_pointer_increment (toplevel, event->keyval, increment);
+#endif
+
+	return TRUE;
 
 #undef SMALL_INCREMENT
 #undef NORMAL_INCREMENT
@@ -1029,8 +1069,10 @@ static gboolean panel_toplevel_handle_grab_op_key_event(PanelToplevel* toplevel,
 		case PANEL_GRAB_OP_RESIZE_DOWN:
 		case PANEL_GRAB_OP_RESIZE_LEFT:
 		case PANEL_GRAB_OP_RESIZE_RIGHT:
-			retval = panel_toplevel_warp_pointer_increment (
-						toplevel, event->keyval, 1);
+#ifdef HAVE_X11
+			if (is_using_x11 ())
+				retval = panel_toplevel_warp_pointer_increment (toplevel, event->keyval, 1);
+#endif
 			break;
 		default:
 			g_assert_not_reached ();
@@ -2964,7 +3006,7 @@ panel_toplevel_move_resize_window (PanelToplevel *toplevel,
 
 	if(resize || move)
 	{
-		for(list = toplevel->priv->panel_widget->applet_list;list!=NULL;list = g_list_next(list)) 
+		for(list = toplevel->priv->panel_widget->applet_list;list!=NULL;list = g_list_next(list))
 		{
 			AppletData *ad = list->data;
 			id = mate_panel_applet_get_id_by_widget (ad->applet);
@@ -3014,7 +3056,7 @@ set_background_default_style (GtkWidget *widget)
 		return;
 
 	toplevel = PANEL_TOPLEVEL (widget);
- 
+
 	context = gtk_widget_get_style_context (widget);
 	state = gtk_style_context_get_state (context);
 
@@ -3061,14 +3103,20 @@ panel_toplevel_realize (GtkWidget *widget)
 	set_background_default_style (widget);
 	panel_background_realized (&toplevel->background, window);
 
+#ifdef HAVE_WAYLAND
+	if (is_using_wayland ()) {
+		wayland_panel_toplevel_realize (toplevel);
+	}
+#endif
+
 	panel_struts_set_window_hint (toplevel);
 
 	gdk_window_set_group (window, window);
-	gdk_window_set_geometry_hints (window, NULL, 0);
 
 	panel_toplevel_initially_hide (toplevel);
 
 	panel_toplevel_move_resize_window (toplevel, TRUE, TRUE);
+
 }
 
 static void
@@ -3470,7 +3518,7 @@ panel_toplevel_button_release_event (GtkWidget      *widget,
 static gboolean
 panel_toplevel_configure_event (GtkWidget	  *widget,
 				GdkEventConfigure *event)
-{	
+{
 	PanelToplevel *toplevel;
 
 	toplevel = PANEL_TOPLEVEL (widget);
@@ -4850,7 +4898,7 @@ panel_toplevel_init (PanelToplevel *toplevel)
 
 	panel_background_init (&toplevel->background,
 			       (PanelBackgroundChangedNotify) background_changed,
-			       toplevel);	
+			       toplevel);
 
 	update_style_classes (toplevel);
 }

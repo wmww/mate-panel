@@ -68,6 +68,8 @@ panel_sources = \
 
 if ENABLE_WAYLAND
 panel_sources += \
+	wayland-backend.c \
+	wayland-layer-shell-gtk.c \
 	wayland-protocols/wlr-layer-shell-unstable-v1.c \
 	wayland-protocols/xdg-shell.c
 endif
@@ -130,6 +132,8 @@ panel_headers = \
 
 if ENABLE_WAYLAND
 panel_headers += \
+	wayland-backend.h \
+	wayland-layer-shell-gtk.h \
 	wayland-protocols/wlr-layer-shell-unstable-v1-client.h \
 	wayland-protocols/xdg-shell-client.h
 endif

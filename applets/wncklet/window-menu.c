@@ -228,6 +228,7 @@ gboolean window_menu_applet_fill(MatePanelApplet* applet)
 	gtk_widget_set_name (window_menu->applet, "window-menu-applet-button");
 	gtk_widget_set_tooltip_text(window_menu->applet, _("Window Selector"));
 
+
 	mate_panel_applet_set_flags(applet, MATE_PANEL_APPLET_EXPAND_MINOR);
 	window_menu->size = mate_panel_applet_get_size(applet);
 	window_menu->orient = mate_panel_applet_get_orient(applet);

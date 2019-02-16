@@ -27,13 +27,17 @@
 #include "panel-session.h"
 #include "panel-schemas.h"
 #include "panel-stock-icons.h"
-#include "panel-action-protocol.h"
 #include "panel-lockdown.h"
 #include "panel-icon-names.h"
 #include "panel-reset.h"
 #include "panel-run-dialog.h"
+#ifdef HAVE_X11
+#include "panel-action-protocol.h"
 #include "xstuff.h"
-
+#endif
+#ifdef HAVE_WAYLAND
+#include "wayland-backend.h"
+#endif
 /* globals */
 GSList *panels = NULL;
 GSList *panel_list = NULL;
@@ -152,12 +156,21 @@ main (int argc, char **argv)
 		gtk_window_set_default_icon_name (PANEL_ICON_PANEL);
 	}
 
+#ifdef HAVE_WAYLAND
+	if (is_using_wayland ()) {
+		wayland_init ();
+	}
+#endif
+
 	if (!panel_shell_register (replace)) {
 		panel_cleanup_do ();
 		return -1;
 	}
 
-	panel_action_protocol_init ();
+#ifdef HAVE_X11
+	if (is_using_x11 ())
+		panel_action_protocol_init ();
+#endif
 	panel_multiscreen_init ();
 	panel_init_stock_icons_and_items ();
 
@@ -170,7 +183,24 @@ main (int argc, char **argv)
 	                 (GFunc)panel_widget_add_forbidden,
 	                 NULL);
 
-	xstuff_init ();
+	gboolean found_backend = FALSE;
+
+#ifdef HAVE_WAYLAND
+	if (is_using_wayland ()) {
+		found_backend = TRUE;
+	}
+#endif
+
+#ifdef HAVE_X11
+	if (is_using_x11 ()) {
+		xstuff_init ();
+		found_backend = TRUE;
+	}
+#endif
+
+	if (!found_backend) {
+		g_error("GDK platform not supported");
+	}
 
 	/* Flush to make sure our struts are seen by everyone starting
 	 * immediate after (eg, the caja desktop). */

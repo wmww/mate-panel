@@ -661,6 +661,7 @@ applet_show_menu (AppletInfo     *info,
 	if (!gtk_widget_get_realized (info->menu))
 		gtk_widget_show (info->menu);
 
+	gtk_window_set_attached_to (GTK_WINDOW (gtk_widget_get_toplevel (info->menu)), info->widget);
 	gtk_menu_popup_at_pointer (GTK_MENU (info->menu), NULL);
 }
 

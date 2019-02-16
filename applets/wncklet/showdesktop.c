@@ -32,6 +32,7 @@
 #include <glib/gi18n.h>
 
 #include <gtk/gtk.h>
+
 #include <gdk/gdkx.h>
 
 #define WNCK_I_KNOW_THIS_IS_UNSTABLE
@@ -270,6 +271,7 @@ static void update_button_display(ShowDesktopData* sdd)
 	}
 
 	gtk_widget_set_tooltip_text(sdd->button, tip);
+
 }
 
 static void update_button_state(ShowDesktopData* sdd)

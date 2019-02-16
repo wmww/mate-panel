@@ -77,6 +77,8 @@ void   panel_util_set_current_active_x11_window (GtkWidget *toplevel,
 					     Window     window);
 #endif
 
+int panel_util_get_screen_number (GdkScreen *screen);
+
 #ifdef __cplusplus
 }
 #endif

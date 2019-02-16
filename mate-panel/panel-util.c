@@ -54,6 +54,10 @@
 static Atom _net_active_window = None;
 #endif
 
+#ifdef HAVE_WAYLAND
+#include <gdk/gdkwayland.h>
+#endif
+
 char *
 panel_util_make_exec_uri_for_desktop (const char *exec)
 {
@@ -1198,6 +1202,7 @@ panel_util_query_tooltip_cb (GtkWidget  *widget,
 		return FALSE;
 
 	gtk_tooltip_set_text (tooltip, text);
+
 	return TRUE;
 }
 
@@ -1251,7 +1256,8 @@ panel_util_get_file_optional_homedir (const char *location)
 
 #ifdef HAVE_X11
 
-static void panel_menu_bar_get_net_active_x11_window(Display *xdisplay)
+static void
+panel_menu_bar_get_net_active_x11_window(Display *xdisplay)
 {
 	if (_net_active_window == None)
 		_net_active_window = XInternAtom (xdisplay,
@@ -1259,7 +1265,8 @@ static void panel_menu_bar_get_net_active_x11_window(Display *xdisplay)
 						  False);
 }
 
-Window panel_util_get_current_active_x11_window (GtkWidget *toplevel)
+Window
+panel_util_get_current_active_x11_window (GtkWidget *toplevel)
 {
 	GdkScreen  *screen;
 	GdkDisplay *display;
@@ -1300,7 +1307,8 @@ Window panel_util_get_current_active_x11_window (GtkWidget *toplevel)
 	return res;
 }
 
-void panel_util_set_current_active_x11_window (GtkWidget *toplevel, Window window)
+void
+panel_util_set_current_active_x11_window (GtkWidget *toplevel, Window window)
 {
 	GdkScreen  *screen;
 	GdkDisplay *display;
@@ -1338,3 +1346,16 @@ void panel_util_set_current_active_x11_window (GtkWidget *toplevel, Window windo
 }
 
 #endif
+
+int
+panel_util_get_screen_number (GdkScreen *screen)
+{
+#ifdef HAVE_X11
+	if (GDK_IS_X11_SCREEN (screen)) {
+		return (gdk_x11_screen_get_screen_number(screen));
+	} else
+#endif
+	{ // Not using X11
+		return 1;
+	}
+}

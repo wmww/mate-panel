@@ -22,13 +22,24 @@
  */
 
 #include <config.h>
+
+#ifdef HAVE_X11
 #include <gdk/gdkx.h>
+#endif
 
 #include "panel-struts.h"
 
 #include "panel-multiscreen.h"
-#include "panel-xutils.h"
+#include "panel-util.h"
 
+#ifdef HAVE_X11
+#include "panel-xutils.h"
+#include "xstuff.h"
+#endif
+
+#ifdef HAVE_WAYLAND
+#include "wayland-backend.h"
+#endif
 
 typedef struct {
         PanelToplevel    *toplevel;
@@ -271,9 +282,6 @@ panel_struts_set_window_hint (PanelToplevel *toplevel)
 	scale = gtk_widget_get_scale_factor (widget);
 	strut_size = strut->allocated_strut_size;
 
-	screen_width  = WidthOfScreen (gdk_x11_screen_get_xscreen (strut->screen)) / scale;
-	screen_height = HeightOfScreen (gdk_x11_screen_get_xscreen (strut->screen)) / scale;
-
 	panel_struts_get_monitor_geometry (strut->screen,
 					   strut->monitor,
 					   &monitor_x,
@@ -287,6 +295,21 @@ panel_struts_set_window_hint (PanelToplevel *toplevel)
                                                  &rightmost,
                                                  &topmost,
                                                  &bottommost);
+
+#ifdef HAVE_X11
+	if (GDK_IS_X11_SCREEN (strut->screen)) {
+		screen_width  = WidthOfScreen (gdk_x11_screen_get_xscreen (strut->screen)) / scale;
+		screen_height = HeightOfScreen (gdk_x11_screen_get_xscreen (strut->screen)) / scale;
+		screen_width  /= scale;
+		screen_height /= scale;
+	} else
+#endif
+	{ // Not using X11
+		screen_width = monitor_width;
+		screen_height = monitor_height;
+		g_assert(monitor_x == 0);
+// 		g_assert(monitor_y == 0);
+	}
 
 	switch (strut->orientation) {
 	case PANEL_ORIENTATION_TOP:
@@ -314,20 +337,40 @@ panel_struts_set_window_hint (PanelToplevel *toplevel)
 		break;
 	}
 
-	panel_xutils_set_strut (gtk_widget_get_window (widget),
-				strut->orientation,
-				strut_size,
-				strut->allocated_strut_start * scale,
-				strut->allocated_strut_end * scale);
+#ifdef HAVE_X11
+	if (is_using_x11 ()) {
+		panel_xutils_set_strut (gtk_widget_get_window (widget),
+					strut->orientation,
+					strut_size,
+					strut->allocated_strut_start * scale,
+					strut->allocated_strut_end * scale);
+	}
+#endif
+
+#ifdef HAVE_WAYLAND
+	if (is_using_wayland ()) {
+		wayland_panel_toplevel_set_strut (toplevel,
+						  strut->orientation,
+						  strut_size,
+						  strut->allocated_strut_start * scale,
+						  strut->allocated_strut_end * scale);
+	}
+#endif
 }
 
 void
 panel_struts_unset_window_hint (PanelToplevel *toplevel)
 {
-	if (!gtk_widget_get_realized (GTK_WIDGET (toplevel)))
+#ifdef HAVE_X11
+	GtkWidget *widget;
+
+	widget = GTK_WIDGET (toplevel);
+
+	if (!gtk_widget_get_realized (widget) || !GDK_IS_X11_DISPLAY (gtk_widget_get_display (widget)))
 		return;
 
 	panel_xutils_set_strut (gtk_widget_get_window (GTK_WIDGET (toplevel)), 0, 0, 0, 0);
+#endif // HAVE_X11
 }
 
 static inline int
@@ -375,8 +418,8 @@ panel_struts_compare (const PanelStrut *s1,
 	int s2_depth;
 
 	if (s1->screen != s2->screen)
-		return gdk_x11_screen_get_screen_number (s1->screen) -
-			gdk_x11_screen_get_screen_number (s2->screen);
+		return panel_util_get_screen_number (s1->screen) -
+			panel_util_get_screen_number (s2->screen);
 
 	if (s1->monitor != s2->monitor)
 		return s1->monitor - s2->monitor;

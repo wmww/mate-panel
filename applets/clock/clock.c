@@ -672,6 +672,8 @@ update_tooltip (ClockData * cd)
         if (g_strcmp0 (old_tip, tip))
             gtk_widget_set_tooltip_text (cd->panel_button, tip);
 
+
+
         g_free (old_tip);
         if (!cd->showdate)
                 g_free (tip);
@@ -1363,6 +1365,7 @@ weather_tooltip (GtkWidget   *widget,
                                 continue;
 
                         weather_info_setup_tooltip (info, location, tooltip, cd->format);
+                        // TODO: make work with Wayland
 
                         return TRUE;
                 }
