@@ -35,6 +35,8 @@ libpanel_util_la_SOURCES =		\
 	panel-show.c			\
 	panel-show.h			\
 	panel-xdg.c			\
-	panel-xdg.h
+	panel-xdg.h			\
+	panel-snap-env.c		\
+	panel-snap-env.h
 
 -include $(top_srcdir)/git.mk
