@@ -31,6 +31,7 @@
 
 #include "panel-error.h"
 #include "panel-glib.h"
+#include "panel-snap-env.h"
 
 #include "panel-launch.h"
 
@@ -114,6 +115,7 @@ panel_app_info_launch_uris (GDesktopAppInfo   *appinfo,
 	context = gdk_display_get_app_launch_context (display);
 	gdk_app_launch_context_set_screen (context, screen);
 	gdk_app_launch_context_set_timestamp (context, timestamp);
+	panel_snap_env_setup_launch_context_if_needed (G_APP_LAUNCH_CONTEXT (context));
 
 	local_error = NULL;
 	if (action == NULL) {
