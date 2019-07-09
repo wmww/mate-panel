@@ -35,8 +35,10 @@
 #include <glib/gi18n.h>
 #include <gdk/gdkkeysyms.h>
 
+#ifdef HAVE_X11
 #define WNCK_I_KNOW_THIS_IS_UNSTABLE
 #include <libwnck/libwnck.h>
+#endif // HAVE_X11
 
 #include "wncklet.h"
 #include "window-menu.h"
@@ -151,6 +153,9 @@ static void window_menu_size_allocate(MatePanelApplet* applet, GtkAllocation* al
 
 	orient = mate_panel_applet_get_orient(applet);
 
+	if (!GTK_IS_CONTAINER (window_menu->selector))
+		return;
+
 	children = gtk_container_get_children(GTK_CONTAINER(window_menu->selector));
 	child = GTK_WIDGET(children->data);
 	g_list_free(children);
@@ -175,8 +180,11 @@ static void window_menu_size_allocate(MatePanelApplet* applet, GtkAllocation* al
 	window_menu->orient = orient;
 }
 
+#ifdef HAVE_X11
 static gboolean window_menu_key_press_event(GtkWidget* widget, GdkEventKey* event, WindowMenu* window_menu)
 {
+	g_return_val_if_fail (GDK_IS_X11_DISPLAY (gdk_display_get_default ()), FALSE)
+
 	GtkMenuShell* menu_shell;
 	WnckSelector* selector;
 
@@ -206,6 +214,7 @@ static gboolean window_menu_key_press_event(GtkWidget* widget, GdkEventKey* even
 
 	return FALSE;
 }
+#endif // HAVE_X11
 
 static gboolean filter_button_press(GtkWidget* widget, GdkEventButton* event, gpointer data)
 {
@@ -240,12 +249,22 @@ gboolean window_menu_applet_fill(MatePanelApplet* applet)
 	                                            action_group);
 	g_object_unref(action_group);
 
-	window_menu->selector = wnck_selector_new();
+#ifdef HAVE_X11
+	if (GDK_IS_X11_DISPLAY (gdk_display_get_default ()))
+	{
+		window_menu->selector = wnck_selector_new();
+
+		mate_panel_applet_set_background_widget(MATE_PANEL_APPLET(window_menu->applet), GTK_WIDGET(window_menu->selector));
+
+		g_signal_connect(window_menu->applet, "key_press_event", G_CALLBACK(window_menu_key_press_event), window_menu);
+	}
+	else
+#endif // HAVE_X11
+	{
+		window_menu->selector = gtk_label_new ("[Window menu not supported on Wayland]");
+	}
 	gtk_container_add(GTK_CONTAINER(window_menu->applet), window_menu->selector);
 
-	mate_panel_applet_set_background_widget(MATE_PANEL_APPLET(window_menu->applet), GTK_WIDGET(window_menu->selector));
-
-	g_signal_connect(window_menu->applet, "key_press_event", G_CALLBACK(window_menu_key_press_event), window_menu);
 	g_signal_connect(window_menu->applet, "size-allocate", G_CALLBACK(window_menu_size_allocate), window_menu);
 
 	g_signal_connect_after(G_OBJECT(window_menu->applet), "focus-in-event", G_CALLBACK(gtk_widget_queue_draw), window_menu);

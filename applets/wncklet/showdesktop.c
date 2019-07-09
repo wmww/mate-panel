@@ -25,17 +25,15 @@
 	#include <config.h>
 #endif
 
-#ifndef HAVE_X11
-#error file should only be built when HAVE_X11 is enabled
-#endif
-
 #include <glib/gi18n.h>
 
 #include <gtk/gtk.h>
-#include <gdk/gdkx.h>
 
+#ifdef HAVE_X11
+#include <gdk/gdkx.h>
 #define WNCK_I_KNOW_THIS_IS_UNSTABLE
 #include <libwnck/libwnck.h>
+#endif
 
 #include "wncklet.h"
 #include "showdesktop.h"
@@ -55,7 +53,9 @@ typedef struct {
 	GtkOrientation orient;
 	int size;
 
+#ifdef HAVE_X11
 	WnckScreen* wnck_screen;
+#endif // HAVE_X11
 
 	guint showing_desktop: 1;
 	guint button_activate;
@@ -73,7 +73,7 @@ static void update_button_display(ShowDesktopData* sdd);
 static void theme_changed_callback(GtkIconTheme* icon_theme, ShowDesktopData* sdd);
 
 static void button_toggled_callback(GtkWidget* button, ShowDesktopData* sdd);
-static void show_desktop_changed_callback(WnckScreen* screen, ShowDesktopData* sdd);
+static void show_desktop_changed_callback(ShowDesktopData* sdd);
 
 /* this is when the panel orientation changes */
 
@@ -298,11 +298,16 @@ static void applet_destroyed(GtkWidget* applet, ShowDesktopData* sdd)
 		sdd->button_activate = 0;
 	}
 
-	if (sdd->wnck_screen != NULL)
+#ifdef HAVE_X11
+	if (GDK_IS_X11_DISPLAY (gdk_display_get_default ()))
 	{
-		g_signal_handlers_disconnect_by_func(sdd->wnck_screen, show_desktop_changed_callback, sdd);
-		sdd->wnck_screen = NULL;
+		if (sdd->wnck_screen != NULL)
+		{
+			g_signal_handlers_disconnect_by_func(sdd->wnck_screen, show_desktop_changed_callback, sdd);
+			sdd->wnck_screen = NULL;
+		}
 	}
+#endif // HAVE_X11
 
 	if (sdd->icon_theme != NULL)
 	{
@@ -360,21 +365,27 @@ static void show_desktop_applet_realized(MatePanelApplet* applet, gpointer data)
 
 	sdd = (ShowDesktopData*) data;
 
-	if (sdd->wnck_screen != NULL)
-		g_signal_handlers_disconnect_by_func(sdd->wnck_screen, show_desktop_changed_callback, sdd);
-
 	if (sdd->icon_theme != NULL)
 		g_signal_handlers_disconnect_by_func(sdd->icon_theme, theme_changed_callback, sdd);
 
 	screen = gtk_widget_get_screen(sdd->applet);
-	sdd->wnck_screen = wnck_screen_get(gdk_x11_screen_get_screen_number (screen));
 
-	if (sdd->wnck_screen != NULL)
-		wncklet_connect_while_alive(sdd->wnck_screen, "showing_desktop_changed", G_CALLBACK(show_desktop_changed_callback), sdd, sdd->applet);
-	else
-		g_warning("Could not get WnckScreen!");
+#ifdef HAVE_X11
+	if (GDK_IS_X11_DISPLAY (gdk_display_get_default ()))
+	{
+		if (sdd->wnck_screen != NULL)
+			g_signal_handlers_disconnect_by_func(sdd->wnck_screen, show_desktop_changed_callback, sdd);
 
-	show_desktop_changed_callback(sdd->wnck_screen, sdd);
+		sdd->wnck_screen = wnck_screen_get(gdk_x11_screen_get_screen_number (screen));
+
+		if (sdd->wnck_screen != NULL)
+			wncklet_connect_while_alive(sdd->wnck_screen, "showing_desktop_changed", G_CALLBACK(show_desktop_changed_callback), sdd, sdd->applet);
+		else
+			g_warning("Could not get WnckScreen!");
+	}
+#endif // HAVE_X11
+
+	show_desktop_changed_callback(sdd);
 
 	sdd->icon_theme = gtk_icon_theme_get_for_screen (screen);
 	wncklet_connect_while_alive(sdd->icon_theme, "changed", G_CALLBACK(theme_changed_callback), sdd, sdd->applet);
@@ -513,7 +524,22 @@ static void display_about_dialog(GtkAction* action, ShowDesktopData* sdd)
 
 static void button_toggled_callback(GtkWidget* button, ShowDesktopData* sdd)
 {
-	if (!gdk_x11_screen_supports_net_wm_hint(gtk_widget_get_screen(button), gdk_atom_intern("_NET_SHOWING_DESKTOP", FALSE)))
+	gboolean can_show_desktop;
+
+#ifdef HAVE_X11
+	if (GDK_IS_X11_DISPLAY (gdk_display_get_default ()))
+	{
+		can_show_desktop = gdk_x11_screen_supports_net_wm_hint(gtk_widget_get_screen(button),
+								       gdk_atom_intern("_NET_SHOWING_DESKTOP",
+								       FALSE)))
+	}
+	else
+#endif
+	{ // not using X11
+		can_show_desktop = FALSE;
+	}
+
+	if (!can_show_desktop)
 	{
 		static GtkWidget* dialog = NULL;
 
@@ -526,7 +552,11 @@ static void button_toggled_callback(GtkWidget* button, ShowDesktopData* sdd)
 			return;
 		}
 
-		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, _("Your window manager does not support the show desktop button, or you are not running a window manager."));
+		dialog = gtk_message_dialog_new(NULL,
+						GTK_DIALOG_MODAL,
+						GTK_MESSAGE_ERROR,
+						GTK_BUTTONS_CLOSE,
+						_("Your window manager does not support the show desktop button, or you are not running a window manager."));
 
 		g_object_add_weak_pointer(G_OBJECT(dialog), (gpointer) &dialog);
 
@@ -539,16 +569,20 @@ static void button_toggled_callback(GtkWidget* button, ShowDesktopData* sdd)
 		return;
 	}
 
-	if (sdd->wnck_screen != NULL)
+#ifdef HAVE_X11
+	if (GDK_IS_X11_DISPLAY (gdk_display_get_default ()) && sdd->wnck_screen != NULL)
 		wnck_screen_toggle_showing_desktop(sdd->wnck_screen, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)));
+#endif // HAVE_X11
 
 	update_button_display (sdd);
 }
 
-static void show_desktop_changed_callback(WnckScreen* screen, ShowDesktopData* sdd)
+static void show_desktop_changed_callback(ShowDesktopData* sdd)
 {
-	if (sdd->wnck_screen != NULL)
+#ifdef HAVE_X11
+	if (GDK_IS_X11_DISPLAY (gdk_display_get_default ()) && sdd->wnck_screen != NULL)
 		sdd->showing_desktop = wnck_screen_get_showing_desktop(sdd->wnck_screen);
+#endif // HAVE_X11
 
 	update_button_state (sdd);
 }

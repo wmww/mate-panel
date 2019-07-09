@@ -19,12 +19,15 @@
 
 #include <glib/gi18n.h>
 #include <gtk/gtk.h>
+#include <gio/gio.h>
+
+#ifdef HAVE_X11
 #define WNCK_I_KNOW_THIS_IS_UNSTABLE
 #include <libwnck/libwnck.h>
-#include <gio/gio.h>
 #ifdef HAVE_WINDOW_PREVIEWS
 #include <gdk/gdkx.h>
 #endif
+#endif // HAVE_X11
 
 #define MATE_DESKTOP_USE_UNSTABLE_API
 #include <libmate-desktop/mate-desktop-utils.h>
@@ -38,6 +41,12 @@
 #define WINDOW_LIST_PREVIEW_SCHEMA "org.mate.panel.applet.window-list-previews"
 #endif
 
+typedef enum {
+  TASKLIST_NEVER_GROUP,
+  TASKLIST_AUTO_GROUP,
+  TASKLIST_ALWAYS_GROUP
+} TasklistGroupingType;
+
 typedef struct {
 	GtkWidget* applet;
 	GtkWidget* tasklist;
@@ -48,7 +57,8 @@ typedef struct {
 	gint thumbnail_size;
 #endif
 	gboolean include_all_workspaces;
-	WnckTasklistGroupingType grouping;
+
+	TasklistGroupingType grouping;
 	gboolean move_unminimized_windows;
 
 	GtkOrientation orientation;
@@ -98,9 +108,11 @@ static void tasklist_update(TasklistData* tasklist)
 		gtk_widget_set_size_request(GTK_WIDGET(tasklist->tasklist), tasklist->size, -1);
 	}
 
+#ifdef HAVE_X11
 	wnck_tasklist_set_grouping(WNCK_TASKLIST(tasklist->tasklist), tasklist->grouping);
 	wnck_tasklist_set_include_all_workspaces(WNCK_TASKLIST(tasklist->tasklist), tasklist->include_all_workspaces);
 	wnck_tasklist_set_switch_workspace_on_unminimize(WNCK_TASKLIST(tasklist->tasklist), tasklist->move_unminimized_windows);
+#endif
 }
 
 static void response_cb(GtkWidget* widget, int id, TasklistData* tasklist)
@@ -141,7 +153,10 @@ static void applet_change_orient(MatePanelApplet* applet, MatePanelAppletOrient 
 		return;
 
 	tasklist->orientation = new_orient;
-	wnck_tasklist_set_orientation (WNCK_TASKLIST (tasklist->tasklist), new_orient);
+#ifdef HAVE_X11
+	if (GDK_IS_X11_DISPLAY (gdk_display_get_default ()))
+		wnck_tasklist_set_orientation (WNCK_TASKLIST (tasklist->tasklist), new_orient);
+#endif // HAVE_X11
 
 	tasklist_update(tasklist);
 }
@@ -153,7 +168,10 @@ static void applet_change_background(MatePanelApplet* applet, MatePanelAppletBac
 		case PANEL_NO_BACKGROUND:
 		case PANEL_COLOR_BACKGROUND:
 		case PANEL_PIXMAP_BACKGROUND:
-			wnck_tasklist_set_button_relief(WNCK_TASKLIST(tasklist->tasklist), GTK_RELIEF_NONE);
+#ifdef HAVE_X11
+			if (GDK_IS_X11_DISPLAY (gdk_display_get_default ()))
+				wnck_tasklist_set_button_relief(WNCK_TASKLIST(tasklist->tasklist), GTK_RELIEF_NONE);
+#endif // HAVE_X11
 			break;
 	}
 }
@@ -464,18 +482,18 @@ static void thumbnail_size_changed(GSettings *settings, gchar* key, TasklistData
 }
 #endif
 
-static GtkWidget* get_grouping_button(TasklistData* tasklist, WnckTasklistGroupingType type)
+static GtkWidget* get_grouping_button(TasklistData* tasklist, TasklistGroupingType type)
 {
 	switch (type)
 	{
 		default:
-		case WNCK_TASKLIST_NEVER_GROUP:
+		case TASKLIST_NEVER_GROUP:
 			return tasklist->never_group_radio;
 			break;
-		case WNCK_TASKLIST_AUTO_GROUP:
+		case TASKLIST_AUTO_GROUP:
 			return tasklist->auto_group_radio;
 			break;
-		case WNCK_TASKLIST_ALWAYS_GROUP:
+		case TASKLIST_ALWAYS_GROUP:
 			return tasklist->always_group_radio;
 			break;
 	}
@@ -483,7 +501,7 @@ static GtkWidget* get_grouping_button(TasklistData* tasklist, WnckTasklistGroupi
 
 static void group_windows_changed(GSettings* settings, gchar* key, TasklistData* tasklist)
 {
-	WnckTasklistGroupingType type;
+	TasklistGroupingType type;
 	GtkWidget* button;
 
 	type = g_settings_get_enum (settings, key);
@@ -568,7 +586,17 @@ static void applet_size_allocate(GtkWidget *widget, GtkAllocation *allocation, T
 	int len;
 	const int* size_hints;
 
-	size_hints = wnck_tasklist_get_size_hint_list (WNCK_TASKLIST (tasklist->tasklist), &len);
+#ifdef HAVE_X11
+	if (GDK_IS_X11_DISPLAY (gdk_display_get_default ()))
+	{
+		size_hints = wnck_tasklist_get_size_hint_list (WNCK_TASKLIST (tasklist->tasklist), &len);
+	}
+	else
+#endif // HAVE_X11
+	{
+		len = 0;
+		size_hints = NULL;
+	}
 
 	g_assert(len % 2 == 0);
 
@@ -700,17 +728,25 @@ gboolean window_list_applet_fill(MatePanelApplet* applet)
 			break;
 	}
 
-	tasklist->tasklist = wnck_tasklist_new();
+#ifdef HAVE_X11
+	if (GDK_IS_X11_DISPLAY (gdk_display_get_default ()))
+	{
+		tasklist->tasklist = wnck_tasklist_new();
 
-	wnck_tasklist_set_orientation (WNCK_TASKLIST (tasklist->tasklist), tasklist->orientation);
-	wnck_tasklist_set_middle_click_close (WNCK_TASKLIST (tasklist->tasklist), TRUE);
-	wnck_tasklist_set_icon_loader(WNCK_TASKLIST(tasklist->tasklist), icon_loader_func, tasklist, NULL);
+		wnck_tasklist_set_orientation (WNCK_TASKLIST (tasklist->tasklist), tasklist->orientation);
+		wnck_tasklist_set_middle_click_close (WNCK_TASKLIST (tasklist->tasklist), TRUE);
+		wnck_tasklist_set_icon_loader(WNCK_TASKLIST(tasklist->tasklist), icon_loader_func, tasklist, NULL);
 
-	g_signal_connect(G_OBJECT(tasklist->tasklist), "destroy", G_CALLBACK(destroy_tasklist), tasklist);
+		g_signal_connect(G_OBJECT(tasklist->tasklist), "destroy", G_CALLBACK(destroy_tasklist), tasklist);
 #ifdef HAVE_WINDOW_PREVIEWS
-	g_signal_connect(G_OBJECT(tasklist->tasklist), "task_enter_notify", G_CALLBACK(applet_enter_notify_event), tasklist);
-	g_signal_connect(G_OBJECT(tasklist->tasklist), "task_leave_notify", G_CALLBACK(applet_leave_notify_event), tasklist);
-#endif
+		g_signal_connect(G_OBJECT(tasklist->tasklist), "task_enter_notify", G_CALLBACK(applet_enter_notify_event), tasklist);
+		g_signal_connect(G_OBJECT(tasklist->tasklist), "task_leave_notify", G_CALLBACK(applet_leave_notify_event), tasklist);
+#endif // HAVE_WINDOW_PREVIEWS
+	} else
+#endif // HAVE_X11
+	{
+		tasklist->tasklist = gtk_label_new ("[Window list not supported on Wayland]");
+	}
 
 	g_signal_connect(G_OBJECT(tasklist->applet), "size_allocate", G_CALLBACK(applet_size_allocate), tasklist);
 
