@@ -186,7 +186,16 @@ foreign_toplevel_handle_title (void *data,
 	ToplevelTask *task = data;
 	if (task->widget)
 	{
-		gtk_button_set_label (GTK_BUTTON (task->widget), title);
+		char *title_rw = g_strdup (title);
+		static const size_t max_len = 18;
+		size_t len = strlen (title_rw);
+		if (len > max_len)
+		{
+			// ignore possibility of unicode
+			title_rw[max_len] = 0;
+		}
+		gtk_button_set_label (GTK_BUTTON (task->widget), title_rw);
+		g_free (title_rw);
 	}
 }
 
