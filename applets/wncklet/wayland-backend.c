@@ -37,8 +37,8 @@ typedef struct
 typedef struct
 {
 	GtkWidget *widget; // does not take ownership of the widget
-	TasklistManager *tasklist;
 	struct zwlr_foreign_toplevel_handle_v1 *toplevel;
+	gboolean active;
 } ToplevelTask;
 
 static const char *tasklist_manager_key = "tasklist_manager";
@@ -230,7 +230,7 @@ foreign_toplevel_handle_state (void *data,
 {
 	ToplevelTask *task = data;
 
-	gboolean active = FALSE;
+	task->active = FALSE;
 
 	enum zwlr_foreign_toplevel_handle_v1_state *i;
 	wl_array_for_each (i, state)
@@ -238,7 +238,7 @@ foreign_toplevel_handle_state (void *data,
 		switch (*i)
 		{
 		case ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED:
-			active = TRUE;
+			task->active = TRUE;
 			break;
 
 		default:
@@ -246,7 +246,7 @@ foreign_toplevel_handle_state (void *data,
 		}
 	}
 
-	gtk_button_set_relief (GTK_BUTTON (task->widget), active ? GTK_RELIEF_NORMAL : GTK_RELIEF_NONE);
+	gtk_button_set_relief (GTK_BUTTON (task->widget), task->active ? GTK_RELIEF_NORMAL : GTK_RELIEF_NONE);
 }
 
 static void
@@ -295,10 +295,17 @@ toplevel_task_handle_clicked (GtkButton *button, ToplevelTask *task)
 {
 	if (task->toplevel)
 	{
-		GdkDisplay *gdk_display = gtk_widget_get_display (GTK_WIDGET (button));
-		GdkSeat *gdk_seat = gdk_display_get_default_seat (gdk_display);
-		struct wl_seat *wl_seat = gdk_wayland_seat_get_wl_seat (gdk_seat);
-		zwlr_foreign_toplevel_handle_v1_activate (task->toplevel, wl_seat);
+		if (task->active)
+		{
+			zwlr_foreign_toplevel_handle_v1_set_minimized (task->toplevel);
+		}
+		else
+		{
+			GdkDisplay *gdk_display = gtk_widget_get_display (GTK_WIDGET (button));
+			GdkSeat *gdk_seat = gdk_display_get_default_seat (gdk_display);
+			struct wl_seat *wl_seat = gdk_wayland_seat_get_wl_seat (gdk_seat);
+			zwlr_foreign_toplevel_handle_v1_activate (task->toplevel, wl_seat);
+		}
 	}
 }
 
@@ -309,7 +316,6 @@ toplevel_task_new (TasklistManager *tasklist, struct zwlr_foreign_toplevel_handl
 	task->widget = gtk_button_new ();
 	g_signal_connect (task->widget, "clicked", G_CALLBACK (toplevel_task_handle_clicked), task);
 	gtk_widget_show (task->widget);
-	task->tasklist = tasklist;
 	task->toplevel = toplevel;
 	zwlr_foreign_toplevel_handle_v1_add_listener (toplevel,
 						      &foreign_toplevel_handle_listener,
