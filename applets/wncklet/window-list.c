@@ -157,8 +157,14 @@ static void applet_change_orient(MatePanelApplet* applet, MatePanelAppletOrient 
 	tasklist->orientation = new_orient;
 #ifdef HAVE_X11
 	if (GDK_IS_X11_DISPLAY (gdk_display_get_default ()))
+	{
 		wnck_tasklist_set_orientation (WNCK_TASKLIST (tasklist->tasklist), new_orient);
-#endif // HAVE_X11
+	}
+	else
+#endif
+	{ // not using X11
+		wayland_tasklist_set_orientation (tasklist->tasklist, new_orient);
+	}
 
 	tasklist_update(tasklist);
 }
