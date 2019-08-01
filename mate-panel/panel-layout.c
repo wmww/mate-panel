@@ -41,8 +41,6 @@
 #include "panel-schemas.h"
 #include "panel-enums.h"
 
-#define PANEL_LAYOUTS_DIR PANELDATADIR "/layouts/"
-
 typedef struct {
         const char *name;
         GType       type;
@@ -89,6 +87,20 @@ static PanelLayoutKeyDefinition panel_layout_object_keys[] = {
         { PANEL_OBJECT_ACTION_TYPE_KEY,          G_TYPE_STRING   }
 };
 
+static gchar *
+panel_layout_dir ()
+{
+	const gchar *data_dir;
+	gchar *layout_dir;
+
+	data_dir = g_getenv("MATE_PANEL_DATA_DIR");
+	if (!data_dir || !*data_dir)
+		data_dir = PANELDATADIR;
+	layout_dir = g_strdup_printf("%s/layouts", data_dir);
+	// data_dir does not need to be freed
+	return layout_dir;
+}
+
 /*
  * return the default layout file path, making it overridable by
  * distributions
@@ -97,13 +109,16 @@ static gchar *
 panel_layout_filename ()
 {
     GSettings *settings;
+    gchar *layout_dir;
     gchar *layout;
     gchar *filename;
 
     settings = g_settings_new (PANEL_SCHEMA);
     layout = g_settings_get_string (settings, PANEL_DEFAULT_LAYOUT);
-    filename = g_strdup_printf (PANEL_LAYOUTS_DIR "%s.layout", layout);
+    layout_dir = panel_layout_dir ();
+    filename = g_strdup_printf ("%s/%s.layout", layout_dir, layout);
     g_free (layout);
+    g_free (layout_dir);
     g_object_unref (settings);
 
     if (g_file_test (filename, G_FILE_TEST_IS_REGULAR)) {
