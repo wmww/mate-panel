@@ -4,6 +4,7 @@ SUBDIRS = \
 layoutdir   = $(datadir)/mate-panel/layouts
 layout_DATA = \
 	default.layout \
+	wayland.layout \
 	fedora.layout \
 	linuxmint.layout \
 	mageia.layout \
