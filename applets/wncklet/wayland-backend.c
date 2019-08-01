@@ -162,8 +162,7 @@ tasklist_manager_new ()
 		return NULL;
 
 	TasklistManager *tasklist = g_new0 (TasklistManager, 1);
-	tasklist->widget = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 4);
-	gtk_box_set_homogeneous (GTK_BOX (tasklist->widget), TRUE);
+	tasklist->widget = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 2);
 	tasklist->manager = wl_registry_bind (wl_registry_global,
 					     foreign_toplevel_manager_global_id,
 					     &zwlr_foreign_toplevel_manager_v1_interface,
@@ -184,6 +183,7 @@ foreign_toplevel_handle_title (void *data,
 			       const char *title)
 {
 	ToplevelTask *task = data;
+
 	if (task->widget)
 	{
 		char *title_rw = g_strdup (title);
@@ -228,7 +228,25 @@ foreign_toplevel_handle_state (void *data,
 			       struct zwlr_foreign_toplevel_handle_v1 *toplevel,
 			       struct wl_array *state)
 {
-	// ignore
+	ToplevelTask *task = data;
+
+	gboolean active = FALSE;
+
+	enum zwlr_foreign_toplevel_handle_v1_state *i;
+	wl_array_for_each (i, state)
+	{
+		switch (*i)
+		{
+		case ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED:
+			active = TRUE;
+			break;
+
+		default:
+			break;
+		}
+	}
+
+	gtk_button_set_relief (GTK_BUTTON (task->widget), active ? GTK_RELIEF_NORMAL : GTK_RELIEF_NONE);
 }
 
 static void
