@@ -30,7 +30,8 @@
 
 typedef struct
 {
-	GtkWidget *widget; // does not take ownership of the widget
+	GtkWidget *list;
+	GtkWidget *outer_box;
 	struct zwlr_foreign_toplevel_manager_v1 *manager;
 } TasklistManager;
 
@@ -114,7 +115,7 @@ foreign_toplevel_manager_handle_toplevel (void *data,
 {
 	TasklistManager *tasklist = data;
 	ToplevelTask *task = toplevel_task_new (tasklist, toplevel);
-	gtk_box_pack_start (GTK_BOX (tasklist->widget), task->widget, FALSE, FALSE, 4);
+	gtk_box_pack_end (GTK_BOX (tasklist->list), task->widget, TRUE, TRUE, 2);
 }
 
 static void
@@ -126,8 +127,8 @@ foreign_toplevel_manager_handle_finished (void *data,
 	tasklist->manager = NULL;
 	zwlr_foreign_toplevel_manager_v1_destroy (manager);
 
-	if (tasklist->widget)
-		g_object_set_data (G_OBJECT (tasklist->widget),
+	if (tasklist->outer_box)
+		g_object_set_data (G_OBJECT (tasklist->outer_box),
 				   tasklist_manager_key,
 				   NULL);
 
@@ -142,14 +143,17 @@ static const struct zwlr_foreign_toplevel_manager_v1_listener foreign_toplevel_m
 static void
 tasklist_manager_disconnected_from_widget (TasklistManager *tasklist)
 {
-	if (tasklist->widget)
+	if (tasklist->list)
 	{
-		GList *children = gtk_container_get_children (GTK_CONTAINER (tasklist->widget));
+		GList *children = gtk_container_get_children (GTK_CONTAINER (tasklist->list));
 		for (GList *iter = children; iter != NULL; iter = g_list_next (iter))
 			gtk_widget_destroy (GTK_WIDGET (iter->data));
 		g_list_free(children);
-		tasklist->widget = NULL;
+		tasklist->list = NULL;
 	}
+
+	if (tasklist->outer_box)
+		tasklist->outer_box = NULL;
 
 	if (tasklist->manager)
 		zwlr_foreign_toplevel_manager_v1_stop (tasklist->manager);
@@ -162,7 +166,11 @@ tasklist_manager_new ()
 		return NULL;
 
 	TasklistManager *tasklist = g_new0 (TasklistManager, 1);
-	tasklist->widget = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 2);
+	tasklist->list = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 2);
+	gtk_box_set_homogeneous (GTK_BOX (tasklist->list), TRUE);
+	tasklist->outer_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+	gtk_box_pack_start (GTK_BOX (tasklist->outer_box), tasklist->list, FALSE, FALSE, 0);
+	gtk_widget_show (tasklist->list);
 	tasklist->manager = wl_registry_bind (wl_registry_global,
 					     foreign_toplevel_manager_global_id,
 					     &zwlr_foreign_toplevel_manager_v1_interface,
@@ -170,7 +178,7 @@ tasklist_manager_new ()
 	zwlr_foreign_toplevel_manager_v1_add_listener (tasklist->manager,
 						       &foreign_toplevel_manager_listener,
 						       tasklist);
-	g_object_set_data_full (G_OBJECT (tasklist->widget),
+	g_object_set_data_full (G_OBJECT (tasklist->outer_box),
 				tasklist_manager_key,
 				tasklist,
 				(GDestroyNotify)tasklist_manager_disconnected_from_widget);
@@ -334,11 +342,19 @@ wayland_tasklist_new ()
 	TasklistManager *tasklist = tasklist_manager_new ();
 	if (!tasklist)
 		return gtk_label_new ("Shell does not support WLR Foreign Toplevel Control");
-	return tasklist->widget;
+	return tasklist->outer_box;
+}
+
+static TasklistManager *
+tasklist_widget_get_tasklist (GtkWidget* tasklist_widget)
+{
+	return g_object_get_data (G_OBJECT (tasklist_widget), tasklist_manager_key);
 }
 
 void
 wayland_tasklist_set_orientation (GtkWidget* tasklist_widget, GtkOrientation orient)
 {
-	gtk_orientable_set_orientation (GTK_ORIENTABLE (tasklist_widget), orient);
+	TasklistManager *tasklist = tasklist_widget_get_tasklist (tasklist_widget);
+	gtk_orientable_set_orientation (GTK_ORIENTABLE (tasklist->list), orient);
+	gtk_orientable_set_orientation (GTK_ORIENTABLE (tasklist->outer_box), orient);
 }
