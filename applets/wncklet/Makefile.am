@@ -23,6 +23,14 @@ WNCKLET_SOURCES = \
 	showdesktop.h \
 	$(BUILT_SOURCES)
 
+if ENABLE_WAYLAND
+WNCKLET_SOURCES += \
+	wayland-backend.c \
+	wayland-backend.h \
+	wayland/wlr-foreign-toplevel-management-unstable-v1.c \
+	wayland/wlr-foreign-toplevel-management-unstable-v1-client.h
+endif
+
 WNCKLET_LDADD =						\
 	../../libmate-panel-applet/libmate-panel-applet-4.la	\
 	$(WNCKLET_LIBS)					\

@@ -8,9 +8,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-	#include <config.h>
-#endif
+#include <config.h>
 
 #include <string.h>
 
@@ -28,6 +26,10 @@
 #include <gdk/gdkx.h>
 #endif
 #endif // HAVE_X11
+
+#ifdef HAVE_WAYLAND
+#include "wayland-backend.h"
+#endif // HAVE_WAYLAND
 
 #define MATE_DESKTOP_USE_UNSTABLE_API
 #include <libmate-desktop/mate-desktop-utils.h>
@@ -728,6 +730,8 @@ gboolean window_list_applet_fill(MatePanelApplet* applet)
 			break;
 	}
 
+	tasklist->tasklist = NULL;
+
 #ifdef HAVE_X11
 	if (GDK_IS_X11_DISPLAY (gdk_display_get_default ()))
 	{
@@ -737,16 +741,25 @@ gboolean window_list_applet_fill(MatePanelApplet* applet)
 		wnck_tasklist_set_middle_click_close (WNCK_TASKLIST (tasklist->tasklist), TRUE);
 		wnck_tasklist_set_icon_loader(WNCK_TASKLIST(tasklist->tasklist), icon_loader_func, tasklist, NULL);
 
-		g_signal_connect(G_OBJECT(tasklist->tasklist), "destroy", G_CALLBACK(destroy_tasklist), tasklist);
 #ifdef HAVE_WINDOW_PREVIEWS
 		g_signal_connect(G_OBJECT(tasklist->tasklist), "task_enter_notify", G_CALLBACK(applet_enter_notify_event), tasklist);
 		g_signal_connect(G_OBJECT(tasklist->tasklist), "task_leave_notify", G_CALLBACK(applet_leave_notify_event), tasklist);
 #endif // HAVE_WINDOW_PREVIEWS
-	} else
-#endif // HAVE_X11
-	{
-		tasklist->tasklist = gtk_label_new ("[Window list not supported on Wayland]");
 	}
+#endif // HAVE_X11
+
+#ifdef HAVE_WAYLAND
+	if (GDK_IS_WAYLAND_DISPLAY (gdk_display_get_default ()))
+	{
+		tasklist->tasklist = wayland_tasklist_new ();
+		wayland_tasklist_set_orientation (tasklist->tasklist, tasklist->orientation);
+	}
+#endif // HAVE_WAYLAND
+
+	if (!tasklist->tasklist)
+		tasklist->tasklist = gtk_label_new ("[Window list not supported on platform]");
+
+	g_signal_connect(G_OBJECT(tasklist->tasklist), "destroy", G_CALLBACK(destroy_tasklist), tasklist);
 
 	g_signal_connect(G_OBJECT(tasklist->applet), "size_allocate", G_CALLBACK(applet_size_allocate), tasklist);
 
