@@ -255,6 +255,7 @@ foreign_toplevel_handle_state (void *data,
 	}
 
 	gtk_button_set_relief (GTK_BUTTON (task->widget), task->active ? GTK_RELIEF_NORMAL : GTK_RELIEF_NONE);
+	gtk_button_clicked (GTK_BUTTON (task->widget));
 }
 
 static void
