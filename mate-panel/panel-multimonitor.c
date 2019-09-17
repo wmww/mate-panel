@@ -228,6 +228,12 @@ panel_multimonitor_get_gdk_monitors (int           *monitors_ret,
 	num_monitors = gdk_display_get_n_monitors (display);
 	geometries = g_new (GdkRectangle, num_monitors);
 
+	if (num_monitors == 0)
+	{
+		g_error ("Zero monitors. Aborting...");
+		g_abort ();
+	}
+
 	for (i = 0; i < num_monitors; i++)
 		gdk_monitor_get_geometry (gdk_display_get_monitor (display, i), &(geometries[i]));
 
